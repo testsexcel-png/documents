@@ -53,15 +53,15 @@
 
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script>
-  var donneesRecord = null;
   var htmlModele = null;
+  var rowId = null;
 
+  // Charge la 2e ligne de la table Modeles
   function chargerModele(table) {
     if (!table || !table.id || table.id.length < 2) {
       document.getElementById('etat').textContent = '⚠️ La table Modeles doit contenir au moins 2 lignes.';
       return;
     }
-    // Toujours prendre la 2e ligne (index 1)
     htmlModele = table.HTML[1] || null;
     if (!htmlModele) {
       document.getElementById('etat').textContent = '⚠️ Colonne HTML vide sur la ligne 2 de la table Modeles.';
@@ -71,69 +71,31 @@
   }
 
   function chargerRecord(record) {
-    donneesRecord = record;
+    // On conserve uniquement le rowId pour le passer à l'iframe via postMessage
+    rowId = record.id;
     verifierPret();
   }
 
   function verifierPret() {
-    if (htmlModele && donneesRecord) {
+    if (htmlModele && rowId) {
       document.getElementById('etat').style.display = 'none';
       document.getElementById('btn-ouvrir').style.display = 'block';
-    } else if (htmlModele && !donneesRecord) {
+    } else if (htmlModele && !rowId) {
       document.getElementById('etat').textContent = '👆 Sélectionnez une ligne dans la table Conventions.';
     }
   }
 
-  function injecterDonnees(html, record) {
-    function eur(val) {
-      if (val === null || val === undefined || val === '') return '–';
-      return Number(val).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
-    }
-    function set(h, id, val) {
-      var re = new RegExp('(id="' + id + '"[^>]*>)[^<]*(</[^>]+>)');
-      return h.replace(re, '$1' + (val !== null && val !== undefined && val !== '' ? val : '–') + '$2');
-    }
-    html = set(html, 'f-Intervenant_Nom',          record.Intervenant_Nom);
-    html = set(html, 'f-Intervenant_Nom2',         record.Intervenant_Nom);
-    html = set(html, 'f-Intervenant_Lieu',         record.Intervenant_Lieu);
-    html = set(html, 'f-Formation_Intitule',       record.Formation_Intitule);
-    html = set(html, 'f-Formation_Dates',          record.Formation_Dates);
-    html = set(html, 'f-Formation_Horaires',       record.Formation_Horaires);
-    html = set(html, 'f-Formation_Lieu',           record.Formation_Lieu);
-    html = set(html, 'f-Formation_Public',         record.Formation_Public);
-    html = set(html, 'f-Formation_NbParticipants', record.Formation_NbParticipants);
-    html = set(html, 'f-Formation_DureePrepa',     record.Formation_DureePrepa);
-    html = set(html, 'f-Remun_Init_Heures',        record.Remun_Init_Heures);
-    html = set(html, 'f-Art5_Heures',              record.Art5_Heures);
-    html = set(html, 'f-Supports_Particuliers_H',  record.Supports_Particuliers_H);
-    html = set(html, 'f-Date_Signature',           record.Date_Signature);
-    html = set(html, 'f-ENG_Signataire',           record.ENG_Signataire);
-    html = set(html, 'f-Remun_Init_MontantH',      eur(record.Remun_Init_MontantH));
-    html = set(html, 'f-Remun_Init_STotal',        eur(record.Remun_Init_STotal));
-    html = set(html, 'f-Art5_MontantH',            eur(record.Art5_MontantH));
-    html = set(html, 'f-Art5_STotal',              eur(record.Art5_STotal));
-    html = set(html, 'f-Supports_Creation',        eur(record.Supports_Creation));
-    html = set(html, 'f-Supports_MaJ',             eur(record.Supports_MaJ));
-    html = set(html, 'f-Supports_Particuliers_M',  eur(record.Supports_Particuliers_M));
-    html = set(html, 'f-Supports_STotal',          eur(record.Supports_STotal));
-    html = set(html, 'f-Total_General',            eur(record.Total_General));
-    html = html.replace('class="btn-print"', 'class="btn-print" style="display:none"');
-    html = html.replace('id="loading"', 'id="loading" style="display:none"');
-    html = html.replace('id="contenu" style="display:none"', 'id="contenu"');
-    return html;
-  }
-
   function ouvrirApercu() {
-    var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
-    document.getElementById('iframe-doc').srcdoc = htmlFinal;
-    document.getElementById('info-intervenant').textContent =
-      'Service Fait : ' + (donneesRecord.Intervenant_Nom || '–') +
-      ' — ' + (donneesRecord.Formation_Intitule || '–');
+    // Injecter directement le HTML — le JS interne du document gère les données via son propre grist.onRecord()
+    document.getElementById('iframe-doc').srcdoc = htmlModele;
+    document.getElementById('info-intervenant').textContent = 'Service Fait';
     document.getElementById('apercu-wrap').style.display = 'flex';
   }
 
   function fermerApercu() {
     document.getElementById('apercu-wrap').style.display = 'none';
+    // Réinitialiser l'iframe pour couper la connexion Grist interne
+    document.getElementById('iframe-doc').srcdoc = '';
   }
 
   function imprimerIframe() {
@@ -149,7 +111,9 @@
       document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable.';
     });
 
-    grist.onRecord(chargerRecord);
+    grist.onRecord(function(record) {
+      chargerRecord(record);
+    });
   } else {
     document.getElementById('etat').textContent = '⚠️ Hors Grist — ouvrez ce widget depuis La Suite.';
   }
