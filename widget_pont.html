@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { margin: 0; font-family: sans-serif; background: #f0f2f7; }
+
+  #etat {
+    padding: 20px;
+    color: #555;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  #btn-ouvrir {
+    display: none;
+    margin: 30px auto;
+    padding: 12px 28px;
+    background: #003189;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,49,137,0.25);
+  }
+  #btn-ouvrir:hover { background: #1a5cb8; }
+
+  #apercu-wrap {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  #apercu-inner {
+    background: white;
+    border-radius: 8px;
+    max-width: 860px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #barre-actions {
+    display: flex;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #003189;
+    align-items: center;
+  }
+
+  #barre-actions span {
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    flex: 1;
+  }
+
+  .btn-action {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .btn-imprimer { background: white; color: #003189; }
+  .btn-imprimer:hover { background: #e8f0fe; }
+  .btn-fermer { background: #c0392b; color: white; }
+  .btn-fermer:hover { background: #e74c3c; }
+
+  iframe {
+    width: 100%;
+    height: 80vh;
+    border: none;
+    display: block;
+  }
+
+  .info-ligne {
+    padding: 8px 20px;
+    background: #f4f6fb;
+    border-top: 1px solid #dde3ef;
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="etat">⏳ Connexion à Grist…</div>
+<button id="btn-ouvrir" onclick="ouvrirApercu()">📄 Générer la convention</button>
+
+<div id="apercu-wrap">
+  <div id="apercu-inner">
+    <div id="barre-actions">
+      <span id="titre-apercu">Convention de Formation</span>
+      <button class="btn-action btn-imprimer" onclick="imprimerIframe()">🖨️ Imprimer / PDF A4</button>
+      <button class="btn-action btn-fermer" onclick="fermerApercu()">✕ Fermer</button>
+    </div>
+    <div class="info-ligne" id="info-intervenant"></div>
+    <iframe id="iframe-convention" srcdoc=""></iframe>
+  </div>
+</div>
+
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script>
+  var donneesRecord = null;
+  var htmlModele = null;
+
+  // ── Chargement du modèle HTML depuis la table Modeles ──
+  function chargerModele(records) {
+    if (!records || records.length === 0) {
+      document.getElementById('etat').textContent = '⚠️ Table Modeles vide. Ajoutez une ligne avec le HTML du modèle.';
+      return;
+    }
+    htmlModele = records[0].HTML || null;
+    if (!htmlModele) {
+      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide dans la table Modeles.';
+      return;
+    }
+    verifierPret();
+  }
+
+  // ── Données de la ligne sélectionnée dans Conventions ──
+  function chargerRecord(record) {
+    donneesRecord = record;
+    verifierPret();
+  }
+
+  function verifierPret() {
+    if (htmlModele && donneesRecord) {
+      document.getElementById('etat').style.display = 'none';
+      document.getElementById('btn-ouvrir').style.display = 'block';
+    } else if (htmlModele && !donneesRecord) {
+      document.getElementById('etat').textContent = '👆 Sélectionnez une ligne dans la table Conventions.';
+    }
+  }
+
+  // ── Injection des données dans le HTML du modèle ──
+  function injecterDonnees(html, record) {
+    function eur(val) {
+      if (val === null || val === undefined || val === '') return '–';
+      return Number(val).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+    }
+    function set(h, id, val) {
+      var tag = 'id="' + id + '"';
+      var re = new RegExp('(' + tag + '[^>]*>)[^<]*(</[^>]+>)');
+      return h.replace(re, '$1' + (val !== null && val !== undefined && val !== '' ? val : '–') + '$2');
+    }
+
+    html = set(html, 'f-Intervenant_Nom',          record.Intervenant_Nom);
+    html = set(html, 'f-Intervenant_Nom2',         record.Intervenant_Nom);
+    html = set(html, 'f-Intervenant_Lieu',         record.Intervenant_Lieu);
+    html = set(html, 'f-Formation_Intitule',       record.Formation_Intitule);
+    html = set(html, 'f-Formation_Dates',          record.Formation_Dates);
+    html = set(html, 'f-Formation_Horaires',       record.Formation_Horaires);
+    html = set(html, 'f-Formation_Lieu',           record.Formation_Lieu);
+    html = set(html, 'f-Formation_Public',         record.Formation_Public);
+    html = set(html, 'f-Formation_NbParticipants', record.Formation_NbParticipants);
+    html = set(html, 'f-Formation_DureePrepa',     record.Formation_DureePrepa);
+    html = set(html, 'f-Remun_Init_Heures',        record.Remun_Init_Heures);
+    html = set(html, 'f-Art5_Heures',              record.Art5_Heures);
+    html = set(html, 'f-Supports_Particuliers_H',  record.Supports_Particuliers_H);
+    html = set(html, 'f-Date_Signature',           record.Date_Signature);
+    html = set(html, 'f-ENG_Signataire',           record.ENG_Signataire);
+    html = set(html, 'f-Remun_Init_MontantH',      eur(record.Remun_Init_MontantH));
+    html = set(html, 'f-Remun_Init_STotal',        eur(record.Remun_Init_STotal));
+    html = set(html, 'f-Art5_MontantH',            eur(record.Art5_MontantH));
+    html = set(html, 'f-Art5_STotal',              eur(record.Art5_STotal));
+    html = set(html, 'f-Supports_Creation',        eur(record.Supports_Creation));
+    html = set(html, 'f-Supports_MaJ',             eur(record.Supports_MaJ));
+    html = set(html, 'f-Supports_Particuliers_M',  eur(record.Supports_Particuliers_M));
+    html = set(html, 'f-Supports_STotal',          eur(record.Supports_STotal));
+    html = set(html, 'f-Total_General',            eur(record.Total_General));
+
+    // Masquer le bouton d'impression interne (on utilise celui du widget pont)
+    html = html.replace('class="btn-print"', 'class="btn-print" style="display:none"');
+    // Masquer le message de chargement
+    html = html.replace('id="loading"', 'id="loading" style="display:none"');
+    // Afficher le contenu
+    html = html.replace('id="contenu" style="display:none"', 'id="contenu"');
+
+    return html;
+  }
+
+  function ouvrirApercu() {
+    var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
+    document.getElementById('iframe-convention').srcdoc = htmlFinal;
+    document.getElementById('info-intervenant').textContent =
+      'Convention : ' + (donneesRecord.Intervenant_Nom || '–') +
+      ' — ' + (donneesRecord.Formation_Intitule || '–');
+    document.getElementById('apercu-wrap').style.display = 'flex';
+  }
+
+  function fermerApercu() {
+    document.getElementById('apercu-wrap').style.display = 'none';
+  }
+
+  function imprimerIframe() {
+    var iframe = document.getElementById('iframe-convention');
+    iframe.contentWindow.print();
+  }
+
+  // ── Connexion Grist ──
+  if (window.grist) {
+    grist.ready({
+      requiredAccess: 'read table',
+      columns: [
+        { name: 'Intervenant_Nom' }, { name: 'Intervenant_Lieu' },
+        { name: 'Formation_Intitule' }, { name: 'Formation_Dates' },
+        { name: 'Formation_Horaires' }, { name: 'Formation_Lieu' },
+        { name: 'Formation_Public' }, { name: 'Formation_NbParticipants' },
+        { name: 'Formation_DureePrepa' }, { name: 'Remun_Init_Heures' },
+        { name: 'Remun_Init_MontantH' }, { name: 'Remun_Init_STotal' },
+        { name: 'Art5_Heures' }, { name: 'Art5_MontantH' },
+        { name: 'Art5_STotal' }, { name: 'Supports_Creation' },
+        { name: 'Supports_MaJ' }, { name: 'Supports_Particuliers_H' },
+        { name: 'Supports_Particuliers_M' }, { name: 'Supports_STotal' },
+        { name: 'Total_General' }, { name: 'Date_Signature' },
+        { name: 'ENG_Signataire' }
+      ]
+    });
+
+    // Lire le modèle HTML depuis la table Modeles
+    grist.docApi.fetchTable('Modeles').then(function(table) {
+      var records = [];
+      var ids = table.id;
+      for (var i = 0; i < ids.length; i++) {
+        records.push({ id: ids[i], HTML: table.HTML[i], Nom: table.Nom[i] });
+      }
+      chargerModele(records);
+    }).catch(function(e) {
+      document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable. Créez-la d\'abord.';
+    });
+
+    // Écouter la ligne sélectionnée dans Conventions
+    grist.onRecord(chargerRecord);
+
+  } else {
+    document.getElementById('etat').textContent = '⚠️ Hors Grist — ouvrez ce widget depuis La Suite.';
+  }
+</script>
+</body>
+</html>
