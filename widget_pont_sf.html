@@ -30,7 +30,7 @@
 </head>
 <body>
 <div id="etat">⏳ Connexion à Grist…</div>
-<button id="btn-ouvrir" onclick="ouvrirApercu()">📄 Générer le service fait</button>
+<button id="btn-ouvrir" onclick="ouvrirApercu()">💾 Enregistrer en PDF</button>
 
 <div id="apercu-wrap">
   <div id="apercu-inner">
@@ -119,11 +119,31 @@ function injecterDonnees(html, rec) {
 function ouvrirApercu() {
   if (!htmlModele || !currentRecord) return;
   var htmlInjecte = injecterDonnees(htmlModele, currentRecord);
-  document.getElementById('iframe-doc').srcdoc = htmlInjecte;
-  document.getElementById('info-intervenant').textContent =
-    'Intervenant : ' + nn(currentRecord.Intervenant_Nom) +
-    '  |  Formation : ' + nn(currentRecord.Formation_Intitule);
-  document.getElementById('apercu-wrap').style.display = 'flex';
+
+  // Nom de fichier PDF personnalisé
+  var nom = (currentRecord.Intervenant_Nom || 'Intervenant').replace(/[/:*?<>|\\]/g, '-');
+  var intitule = (currentRecord.Formation_Intitule || 'Formation').replace(/[/:*?<>|\\]/g, '-').substring(0, 40);
+  var annee = new Date().getFullYear();
+  var titrePdf = 'ServiceFait_' + nom + '_' + intitule + '_' + annee;
+
+  htmlInjecte = htmlInjecte.replace(/<title>[^<]*<\/title>/, '<title>' + titrePdf + '<\/title>');
+  if (htmlInjecte.indexOf('<title>') === -1) {
+    htmlInjecte = htmlInjecte.replace('<head>', '<head><title>' + titrePdf + '</title>');
+  }
+
+  // Ouvrir dans un nouvel onglet
+  var blob = new Blob([htmlInjecte], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  var nouvelOnglet = window.open(url, '_blank');
+
+  if (!nouvelOnglet) {
+    // Fallback si popup bloqué
+    document.getElementById('iframe-doc').srcdoc = htmlInjecte;
+    document.getElementById('info-intervenant').textContent =
+      'Intervenant : ' + nn(currentRecord.Intervenant_Nom) +
+      '  |  Formation : ' + nn(currentRecord.Formation_Intitule);
+    document.getElementById('apercu-wrap').style.display = 'flex';
+  }
 }
 
 function fermerApercu() {
