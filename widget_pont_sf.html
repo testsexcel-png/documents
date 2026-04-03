@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  body { margin: 0; font-family: sans-serif; background: #f0f2f7; }
+  body { margin: 0; font-family: sans-serif; background: #f0f2f7; display: flex; flex-direction: column; align-items: center; padding: 30px; }
   #etat { padding: 20px; color: #555; font-size: 13px; text-align: center; }
   #btn-ouvrir {
-    display: none; margin: 30px auto; padding: 12px 28px;
+    display: none; padding: 12px 28px;
     background: #003189; color: white; border: none; border-radius: 6px;
     font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,49,137,0.25);
   }
@@ -16,14 +16,8 @@
     z-index: 999; justify-content: center; align-items: flex-start;
     padding: 20px; overflow-y: auto;
   }
-  #apercu-inner {
-    background: white; border-radius: 8px; max-width: 860px;
-    width: 100%; position: relative; overflow: hidden;
-  }
-  #barre-actions {
-    display: flex; gap: 10px; padding: 10px 16px;
-    background: #003189; align-items: center;
-  }
+  #apercu-inner { background: white; border-radius: 8px; max-width: 860px; width: 100%; position: relative; }
+  #barre-actions { display: flex; gap: 10px; padding: 10px 16px; background: #003189; align-items: center; border-radius: 8px 8px 0 0; }
   #barre-actions span { color: white; font-weight: 600; font-size: 13px; flex: 1; }
   .btn-action { padding: 6px 16px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; }
   .btn-imprimer { background: white; color: #003189; }
@@ -31,18 +25,17 @@
   .btn-fermer { background: #c0392b; color: white; }
   .btn-fermer:hover { background: #e74c3c; }
   iframe { width: 100%; height: 80vh; border: none; display: block; }
-  .info-ligne { padding: 8px 20px; background: #f4f6fb; border-top: 1px solid #dde3ef; font-size: 11px; color: #666; text-align: center; }
+  .info-ligne { padding: 6px 20px; background: #f4f6fb; border-top: 1px solid #dde3ef; font-size: 11px; color: #666; text-align: center; }
 </style>
 </head>
 <body>
-
 <div id="etat">⏳ Connexion à Grist…</div>
 <button id="btn-ouvrir" onclick="ouvrirApercu()">📄 Générer le service fait</button>
 
 <div id="apercu-wrap">
   <div id="apercu-inner">
     <div id="barre-actions">
-      <span>Service Fait</span>
+      <span id="titre-barre">Service Fait</span>
       <button class="btn-action btn-imprimer" onclick="imprimerIframe()">🖨️ Imprimer / PDF A4</button>
       <button class="btn-action btn-fermer" onclick="fermerApercu()">✕ Fermer</button>
     </div>
@@ -53,70 +46,121 @@
 
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script>
-  var htmlModele = null;
-  var rowId = null;
+var htmlModele = null;
+var currentRecord = null;
 
-  // Charge la 2e ligne de la table Modeles
-  function chargerModele(table) {
-    if (!table || !table.id || table.id.length < 2) {
-      document.getElementById('etat').textContent = '⚠️ La table Modeles doit contenir au moins 2 lignes.';
+function fmt(v) {
+  if (v === null || v === undefined || v === '') return '–';
+  var n = parseFloat(v);
+  if (!isNaN(n)) return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+  return v;
+}
+function n(v) { return (v === null || v === undefined || v === '') ? '–' : v; }
+
+function injecterDonnees(html, rec) {
+  // Remplace le contenu d'un id dans le HTML
+  function setId(h, id, val) {
+    var re = new RegExp('(<[^>]+id="'+ id +'"[^>]*>)[^<]*(</)'  , 'g');
+    return h.replace(re, '$1' + val + '$2');
+  }
+
+  var mh   = parseFloat(rec.Remun_Init_MontantH) || 0;
+  var hPrev = parseFloat(rec.Remun_Init_Heures) || 0;
+  var a5h  = parseFloat(rec.Art5_Heures) || 0;
+  var a5mh = parseFloat(rec.Art5_MontantH) || 0;
+  var today = rec.Date_Signature || new Date().toLocaleDateString('fr-FR');
+
+  var map = {
+    'sf-num'        : n(rec.Convention_ID),
+    'sf-intervenant': n(rec.Intervenant_Nom),
+    'sf-residence'  : n(rec.Intervenant_Lieu),
+    'sf-intitule'   : n(rec.Formation_Intitule),
+    'sf-dates'      : n(rec.Formation_Dates) + (rec.Formation_Horaires ? ' ' + rec.Formation_Horaires : ''),
+    'sf-lieu'       : n(rec.Formation_Lieu),
+    'sf-mh'         : fmt(mh),
+    'sf-h-prev'     : hPrev || '–',
+    'sf-h-real'     : hPrev || '–',
+    'sf-st1'        : fmt(rec.Remun_Init_STotal != null ? rec.Remun_Init_STotal : mh * hPrev),
+    'sf-art5-h'     : a5h || '–',
+    'sf-art5-mh'    : fmt(a5mh),
+    'sf-st2'        : fmt(rec.Art5_STotal != null ? rec.Art5_STotal : a5h * a5mh),
+    'sf-creation'   : rec.Supports_Creation ? fmt(rec.Supports_Creation) : '–',
+    'sf-maj'        : rec.Supports_Maj ? fmt(rec.Supports_Maj) : '–',
+    'sf-supp'       : rec.Supports_Particuliers_H || '–',
+    'sf-st3'        : fmt(rec.Supports_STotal),
+    'sf-total'      : fmt(rec.Total_General),
+    'sf-date-sig'   : today,
+    'sf-identite'   : n(rec.ENG_Signataire),
+    'sf-fonction'   : n(rec.ENG_Fonction),
+    'sf-service'    : n(rec.ENG_Service)
+  };
+
+  for (var id in map) {
+    html = setId(html, id, map[id]);
+  }
+
+  // Masquer le loading, afficher le contenu
+  html = html.replace('id="loading" class="loading"', 'id="loading" class="loading" style="display:none"'  );
+  html = html.replace('id="contenu" style="display:none"', 'id="contenu"');
+
+  // Supprimer le bloc <script> grist interne pour éviter les conflits
+  html = html.replace(/<script[\s\S]*?grist\.onRecord['\s\S]*?<\/script>/i, '');
+
+  return html;
+}
+
+function ouvrirApercu() {
+  if (!htmlModele || !currentRecord) return;
+  var htmlInjecte = injecterDonnees(htmlModele, currentRecord);
+  document.getElementById('iframe-doc').srcdoc = htmlInjecte;
+  document.getElementById('info-intervenant').textContent =
+    'Intervenant : ' + n(currentRecord.Intervenant_Nom) + '  |  Formation : ' + n(currentRecord.Formation_Intitule);
+  document.getElementById('apercu-wrap').style.display = 'flex';
+}
+
+function fermerApercu() {
+  document.getElementById('apercu-wrap').style.display = 'none';
+  document.getElementById('iframe-doc').srcdoc = '';
+}
+
+function imprimerIframe() {
+  document.getElementById('iframe-doc').contentWindow.print();
+}
+
+if (window.grist) {
+  grist.ready({ requiredAccess: 'read table' });
+
+  grist.docApi.fetchTable('Modeles').then(function(table) {
+    if (!table || !table.HTML || table.HTML.length < 2) {
+      document.getElementById('etat').textContent = '⚠️ La table Modeles doit contenir au moins 2 lignes (ligne 2 = Service Fait).';
       return;
     }
     htmlModele = table.HTML[1] || null;
     if (!htmlModele) {
-      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide sur la ligne 2 de la table Modeles.';
+      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide sur la ligne 2 de Modeles.';
       return;
     }
     verifierPret();
-  }
+  }).catch(function() {
+    document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable.';
+  });
 
-  function chargerRecord(record) {
-    // On conserve uniquement le rowId pour le passer à l'iframe via postMessage
-    rowId = record.id;
+  grist.onRecord(function(record) {
+    currentRecord = record;
     verifierPret();
+  });
+} else {
+  document.getElementById('etat').textContent = '⚠️ Hors Grist — ouvrez ce widget depuis La Suite.';
+}
+
+function verifierPret() {
+  if (htmlModele && currentRecord) {
+    document.getElementById('etat').style.display = 'none';
+    document.getElementById('btn-ouvrir').style.display = 'block';
+  } else if (htmlModele && !currentRecord) {
+    document.getElementById('etat').textContent = '👆 Sélectionnez une convention dans la table.';
   }
-
-  function verifierPret() {
-    if (htmlModele && rowId) {
-      document.getElementById('etat').style.display = 'none';
-      document.getElementById('btn-ouvrir').style.display = 'block';
-    } else if (htmlModele && !rowId) {
-      document.getElementById('etat').textContent = '👆 Sélectionnez une ligne dans la table Conventions.';
-    }
-  }
-
-  function ouvrirApercu() {
-    // Injecter directement le HTML — le JS interne du document gère les données via son propre grist.onRecord()
-    document.getElementById('iframe-doc').srcdoc = htmlModele;
-    document.getElementById('info-intervenant').textContent = 'Service Fait';
-    document.getElementById('apercu-wrap').style.display = 'flex';
-  }
-
-  function fermerApercu() {
-    document.getElementById('apercu-wrap').style.display = 'none';
-    // Réinitialiser l'iframe pour couper la connexion Grist interne
-    document.getElementById('iframe-doc').srcdoc = '';
-  }
-
-  function imprimerIframe() {
-    document.getElementById('iframe-doc').contentWindow.print();
-  }
-
-  if (window.grist) {
-    grist.ready({ requiredAccess: 'read table' });
-
-    grist.docApi.fetchTable('Modeles').then(function(table) {
-      chargerModele(table);
-    }).catch(function(e) {
-      document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable.';
-    });
-
-    grist.onRecord(function(record) {
-      chargerRecord(record);
-    });
-  } else {
-    document.getElementById('etat').textContent = '⚠️ Hors Grist — ouvrez ce widget depuis La Suite.';
-  }
+}
 </script>
 </body>
 </html>
