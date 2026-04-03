@@ -96,12 +96,12 @@
 <body>
 
 <div id="etat">⏳ Connexion à Grist…</div>
-<button id="btn-ouvrir" onclick="ouvrirApercu()">📄 Générer la convention</button>
+<button id="btn-ouvrir" onclick="ouvrirApercu()">📄 Générer le document</button>
 
 <div id="apercu-wrap">
   <div id="apercu-inner">
     <div id="barre-actions">
-      <span id="titre-apercu">Convention de Formation</span>
+      <span id="titre-apercu">Document</span>
       <button class="btn-action btn-imprimer" onclick="imprimerIframe()">🖨️ Imprimer / PDF A4</button>
       <button class="btn-action btn-fermer" onclick="fermerApercu()">✕ Fermer</button>
     </div>
@@ -115,15 +115,33 @@
   var donneesRecord = null;
   var htmlModele = null;
 
+  // ── Lire le paramètre ?modele= dans l'URL (1 = convention, 2 = service_fait) ──
+  var params = new URLSearchParams(window.location.search);
+  var ligneModele = parseInt(params.get('modele')) || 1;
+
+  var titresDocuments = {
+    1: { bouton: '📄 Générer la convention', titre: 'Convention de Formation' },
+    2: { bouton: '📄 Générer le service fait', titre: 'Service Fait' }
+  };
+  var infos = titresDocuments[ligneModele] || titresDocuments[1];
+  document.getElementById('btn-ouvrir').textContent = infos.bouton;
+  document.getElementById('titre-apercu').textContent = infos.titre;
+
   // ── Chargement du modèle HTML depuis la table Modeles ──
   function chargerModele(records) {
     if (!records || records.length === 0) {
       document.getElementById('etat').textContent = '⚠️ Table Modeles vide. Ajoutez une ligne avec le HTML du modèle.';
       return;
     }
-    htmlModele = records[0].HTML || null;
+    // Prendre la ligne selon le paramètre ?modele= (index 0 = ligne 1, index 1 = ligne 2)
+    var index = ligneModele - 1;
+    if (index >= records.length) {
+      document.getElementById('etat').textContent = '⚠️ Ligne ' + ligneModele + ' introuvable dans la table Modeles (seulement ' + records.length + ' ligne(s)).';
+      return;
+    }
+    htmlModele = records[index].HTML || null;
     if (!htmlModele) {
-      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide dans la table Modeles.';
+      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide pour la ligne ' + ligneModele + ' dans la table Modeles.';
       return;
     }
     verifierPret();
@@ -181,7 +199,7 @@
     html = set(html, 'f-Supports_STotal',          eur(record.Supports_STotal));
     html = set(html, 'f-Total_General',            eur(record.Total_General));
 
-    // Masquer le bouton d'impression interne (on utilise celui du widget pont)
+    // Masquer le bouton d'impression interne
     html = html.replace('class="btn-print"', 'class="btn-print" style="display:none"');
     // Masquer le message de chargement
     html = html.replace('id="loading"', 'id="loading" style="display:none"');
@@ -195,7 +213,7 @@
     var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
     document.getElementById('iframe-convention').srcdoc = htmlFinal;
     document.getElementById('info-intervenant').textContent =
-      'Convention : ' + (donneesRecord.Intervenant_Nom || '–') +
+      infos.titre + ' : ' + (donneesRecord.Intervenant_Nom || '–') +
       ' — ' + (donneesRecord.Formation_Intitule || '–');
     document.getElementById('apercu-wrap').style.display = 'flex';
   }
