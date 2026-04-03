@@ -96,7 +96,7 @@
 <body>
 
 <div id="etat">⏳ Connexion à Grist…</div>
-<button id="btn-ouvrir" onclick="ouvrirApercu()">📄 Générer la convention</button>
+<button id="btn-ouvrir" onclick="ouvrirApercu()">💾 Enregistrer en PDF</button>
 
 <div id="apercu-wrap">
   <div id="apercu-inner">
@@ -192,13 +192,28 @@
   }
 
   function ouvrirApercu() {
-    var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
+  var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
+
+  // Nom de fichier personnalisé via le titre de la page
+  var nomIntervenant = (donneesRecord.IntervenantNom || 'Intervenant').replace(/[/:*?<>|\]/g, '-');
+  var intitule = (donneesRecord.FormationIntitule || 'Formation').replace(/[/:*?<>|\]/g, '-').substring(0, 40);
+  var annee = new Date().getFullYear();
+  var titrePdf = 'Convention_' + nomIntervenant + '_' + intitule + '_' + annee;
+
+  // Injecter le bon titre dans le HTML avant ouverture
+  htmlFinal = htmlFinal.replace(/<title>[^<]*<\/title>/, '<title>' + titrePdf + '</title>');
+
+  // Ouvrir dans un nouvel onglet (contourne le titre imposé par Grist)
+  var blob = new Blob([htmlFinal], {type: 'text/html'});
+  var url = URL.createObjectURL(blob);
+  var nouvelOnglet = window.open(url, '_blank');
+  if (!nouvelOnglet) {
+    // Fallback : ouverture dans le widget si popup bloqué
     document.getElementById('iframe-convention').srcdoc = htmlFinal;
-    document.getElementById('info-intervenant').textContent =
-      'Convention : ' + (donneesRecord.Intervenant_Nom || '–') +
-      ' — ' + (donneesRecord.Formation_Intitule || '–');
+    document.getElementById('info-intervenant').textContent = 'Convention ' + (donneesRecord.IntervenantNom||'') + ' — ' + (donneesRecord.FormationIntitule||'');
     document.getElementById('apercu-wrap').style.display = 'flex';
   }
+}
 
   function fermerApercu() {
     document.getElementById('apercu-wrap').style.display = 'none';
@@ -213,7 +228,20 @@
   if (window.grist) {
     grist.ready({
       requiredAccess: 'read table',
-
+      columns: [
+        { name: 'Intervenant_Nom' }, { name: 'Intervenant_Lieu' },
+        { name: 'Formation_Intitule' }, { name: 'Formation_Dates' },
+        { name: 'Formation_Horaires' }, { name: 'Formation_Lieu' },
+        { name: 'Formation_Public' }, { name: 'Formation_NbParticipants' },
+        { name: 'Formation_DureePrepa' }, { name: 'Remun_Init_Heures' },
+        { name: 'Remun_Init_MontantH' }, { name: 'Remun_Init_STotal' },
+        { name: 'Art5_Heures' }, { name: 'Art5_MontantH' },
+        { name: 'Art5_STotal' }, { name: 'Supports_Creation' },
+        { name: 'Supports_MaJ' }, { name: 'Supports_Particuliers_H' },
+        { name: 'Supports_Particuliers_M' }, { name: 'Supports_STotal' },
+        { name: 'Total_General' }, { name: 'Date_Signature' },
+        { name: 'ENG_Signataire' }
+      ]
     });
 
     // Lire le modèle HTML depuis la table Modeles
