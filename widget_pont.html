@@ -4,93 +4,34 @@
 <meta charset="UTF-8">
 <style>
   body { margin: 0; font-family: sans-serif; background: #f0f2f7; }
-
-  #etat {
-    padding: 20px;
-    color: #555;
-    font-size: 13px;
-    text-align: center;
-  }
-
+  #etat { padding: 20px; color: #555; font-size: 13px; text-align: center; }
   #btn-ouvrir {
-    display: none;
-    margin: 30px auto;
-    padding: 12px 28px;
-    background: #003189;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,49,137,0.25);
+    display: none; margin: 30px auto; padding: 12px 28px;
+    background: #003189; color: white; border: none; border-radius: 6px;
+    font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,49,137,0.25);
   }
   #btn-ouvrir:hover { background: #1a5cb8; }
-
   #apercu-wrap {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 20px;
-    overflow-y: auto;
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 999; justify-content: center; align-items: flex-start;
+    padding: 20px; overflow-y: auto;
   }
-
   #apercu-inner {
-    background: white;
-    border-radius: 8px;
-    max-width: 860px;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
+    background: white; border-radius: 8px; max-width: 860px;
+    width: 100%; position: relative; overflow: hidden;
   }
-
   #barre-actions {
-    display: flex;
-    gap: 10px;
-    padding: 10px 16px;
-    background: #003189;
-    align-items: center;
+    display: flex; gap: 10px; padding: 10px 16px;
+    background: #003189; align-items: center;
   }
-
-  #barre-actions span {
-    color: white;
-    font-weight: 600;
-    font-size: 13px;
-    flex: 1;
-  }
-
-  .btn-action {
-    padding: 6px 16px;
-    border: none;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    font-weight: 600;
-  }
-
+  #barre-actions span { color: white; font-weight: 600; font-size: 13px; flex: 1; }
+  .btn-action { padding: 6px 16px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; }
   .btn-imprimer { background: white; color: #003189; }
   .btn-imprimer:hover { background: #e8f0fe; }
   .btn-fermer { background: #c0392b; color: white; }
   .btn-fermer:hover { background: #e74c3c; }
-
-  iframe {
-    width: 100%;
-    height: 80vh;
-    border: none;
-    display: block;
-  }
-
-  .info-ligne {
-    padding: 8px 20px;
-    background: #f4f6fb;
-    border-top: 1px solid #dde3ef;
-    font-size: 11px;
-    color: #666;
-    text-align: center;
-  }
+  iframe { width: 100%; height: 80vh; border: none; display: block; }
+  .info-ligne { padding: 8px 20px; background: #f4f6fb; border-top: 1px solid #dde3ef; font-size: 11px; color: #666; text-align: center; }
 </style>
 </head>
 <body>
@@ -115,39 +56,58 @@
   var donneesRecord = null;
   var htmlModele = null;
 
-  // ── Lire le paramètre ?modele= dans l'URL (1 = convention, 2 = service_fait) ──
+  // Lire le paramètre ?modele= dans l'URL
+  // Valeurs possibles : "convention" ou "service_fait"  (ou 1/2 pour compatibilité)
   var params = new URLSearchParams(window.location.search);
-  var ligneModele = parseInt(params.get('modele')) || 1;
+  var nomModele = params.get('modele') || 'convention';
 
   var titresDocuments = {
-    1: { bouton: '📄 Générer la convention', titre: 'Convention de Formation' },
-    2: { bouton: '📄 Générer le service fait', titre: 'Service Fait' }
+    'convention':   { bouton: '📄 Générer la convention',   titre: 'Convention de Formation' },
+    'service_fait': { bouton: '📄 Générer le service fait',  titre: 'Service Fait' },
+    '1':            { bouton: '📄 Générer la convention',   titre: 'Convention de Formation' },
+    '2':            { bouton: '📄 Générer le service fait',  titre: 'Service Fait' }
   };
-  var infos = titresDocuments[ligneModele] || titresDocuments[1];
+  var infos = titresDocuments[nomModele] || titresDocuments['convention'];
   document.getElementById('btn-ouvrir').textContent = infos.bouton;
   document.getElementById('titre-apercu').textContent = infos.titre;
 
-  // ── Chargement du modèle HTML depuis la table Modeles ──
   function chargerModele(records) {
     if (!records || records.length === 0) {
-      document.getElementById('etat').textContent = '⚠️ Table Modeles vide. Ajoutez une ligne avec le HTML du modèle.';
+      document.getElementById('etat').textContent = '⚠️ Table Modeles vide.';
       return;
     }
-    // Prendre la ligne selon le paramètre ?modele= (index 0 = ligne 1, index 1 = ligne 2)
-    var index = ligneModele - 1;
-    if (index >= records.length) {
-      document.getElementById('etat').textContent = '⚠️ Ligne ' + ligneModele + ' introuvable dans la table Modeles (seulement ' + records.length + ' ligne(s)).';
-      return;
+
+    var trouve = null;
+
+    // Chercher par colonne Nom (convention ou service_fait)
+    for (var i = 0; i < records.length; i++) {
+      if (records[i].Nom === nomModele) {
+        trouve = records[i];
+        break;
+      }
     }
-    htmlModele = records[index].HTML || null;
+
+    // Compatibilité : si ?modele=1 ou ?modele=2, prendre par index
+    if (!trouve) {
+      var index = parseInt(nomModele) - 1;
+      if (!isNaN(index) && index >= 0 && index < records.length) {
+        trouve = records[index];
+      }
+    }
+
+    // Dernier recours : première ligne
+    if (!trouve) {
+      trouve = records[0];
+    }
+
+    htmlModele = trouve.HTML || null;
     if (!htmlModele) {
-      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide pour la ligne ' + ligneModele + ' dans la table Modeles.';
+      document.getElementById('etat').textContent = '⚠️ Colonne HTML vide pour le modèle "' + nomModele + '".';
       return;
     }
     verifierPret();
   }
 
-  // ── Données de la ligne sélectionnée dans Conventions ──
   function chargerRecord(record) {
     donneesRecord = record;
     verifierPret();
@@ -162,18 +122,15 @@
     }
   }
 
-  // ── Injection des données dans le HTML du modèle ──
   function injecterDonnees(html, record) {
     function eur(val) {
       if (val === null || val === undefined || val === '') return '–';
       return Number(val).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
     }
     function set(h, id, val) {
-      var tag = 'id="' + id + '"';
-      var re = new RegExp('(' + tag + '[^>]*>)[^<]*(</[^>]+>)');
+      var re = new RegExp('(id="' + id + '"[^>]*>)[^<]*(</[^>]+>)');
       return h.replace(re, '$1' + (val !== null && val !== undefined && val !== '' ? val : '–') + '$2');
     }
-
     html = set(html, 'f-Intervenant_Nom',          record.Intervenant_Nom);
     html = set(html, 'f-Intervenant_Nom2',         record.Intervenant_Nom);
     html = set(html, 'f-Intervenant_Lieu',         record.Intervenant_Lieu);
@@ -198,14 +155,9 @@
     html = set(html, 'f-Supports_Particuliers_M',  eur(record.Supports_Particuliers_M));
     html = set(html, 'f-Supports_STotal',          eur(record.Supports_STotal));
     html = set(html, 'f-Total_General',            eur(record.Total_General));
-
-    // Masquer le bouton d'impression interne
     html = html.replace('class="btn-print"', 'class="btn-print" style="display:none"');
-    // Masquer le message de chargement
     html = html.replace('id="loading"', 'id="loading" style="display:none"');
-    // Afficher le contenu
     html = html.replace('id="contenu" style="display:none"', 'id="contenu"');
-
     return html;
   }
 
@@ -223,31 +175,23 @@
   }
 
   function imprimerIframe() {
-    var iframe = document.getElementById('iframe-convention');
-    iframe.contentWindow.print();
+    document.getElementById('iframe-convention').contentWindow.print();
   }
 
-  // ── Connexion Grist ──
   if (window.grist) {
-    grist.ready({
-      requiredAccess: 'read table',
-    });
+    grist.ready({ requiredAccess: 'read table' });
 
-    // Lire le modèle HTML depuis la table Modeles
     grist.docApi.fetchTable('Modeles').then(function(table) {
       var records = [];
-      var ids = table.id;
-      for (var i = 0; i < ids.length; i++) {
-        records.push({ id: ids[i], HTML: table.HTML[i], Nom: table.Nom[i] });
+      for (var i = 0; i < table.id.length; i++) {
+        records.push({ id: table.id[i], HTML: table.HTML[i], Nom: table.Nom[i] });
       }
       chargerModele(records);
     }).catch(function(e) {
-      document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable. Créez-la d\'abord.';
+      document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable.';
     });
 
-    // Écouter la ligne sélectionnée dans Conventions
     grist.onRecord(chargerRecord);
-
   } else {
     document.getElementById('etat').textContent = '⚠️ Hors Grist — ouvrez ce widget depuis La Suite.';
   }
