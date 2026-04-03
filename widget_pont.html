@@ -192,28 +192,34 @@
   }
 
   function ouvrirApercu() {
-  var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
+    var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
 
-  // Nom de fichier personnalisé via le titre de la page
-  var nomIntervenant = (donneesRecord.IntervenantNom || 'Intervenant').replace(/[/:*?<>|\]/g, '-');
-  var intitule = (donneesRecord.FormationIntitule || 'Formation').replace(/[/:*?<>|\]/g, '-').substring(0, 40);
-  var annee = new Date().getFullYear();
-  var titrePdf = 'Convention_' + nomIntervenant + '_' + intitule + '_' + annee;
+    // Construire un nom de fichier PDF personnalisé
+    var nom = (donneesRecord.Intervenant_Nom || 'Intervenant').replace(/[\/:*?<>|\\]/g, '-');
+    var intitule = (donneesRecord.Formation_Intitule || 'Formation').replace(/[\/:*?<>|\\]/g, '-').substring(0, 40);
+    var annee = new Date().getFullYear();
+    var titrePdf = 'Convention_' + nom + '_' + intitule + '_' + annee;
 
-  // Injecter le bon titre dans le HTML avant ouverture
-  htmlFinal = htmlFinal.replace(/<title>[^<]*<\/title>/, '<title>' + titrePdf + '</title>');
+    // Injecter le titre dans le HTML du document
+    htmlFinal = htmlFinal.replace(/<title>[^<]*<\/title>/, '<title>' + titrePdf + '</title>');
+    if (htmlFinal.indexOf('<title>') === -1) {
+      htmlFinal = htmlFinal.replace('<head>', '<head><title>' + titrePdf + '</title>');
+    }
 
-  // Ouvrir dans un nouvel onglet (contourne le titre imposé par Grist)
-  var blob = new Blob([htmlFinal], {type: 'text/html'});
-  var url = URL.createObjectURL(blob);
-  var nouvelOnglet = window.open(url, '_blank');
-  if (!nouvelOnglet) {
-    // Fallback : ouverture dans le widget si popup bloqué
-    document.getElementById('iframe-convention').srcdoc = htmlFinal;
-    document.getElementById('info-intervenant').textContent = 'Convention ' + (donneesRecord.IntervenantNom||'') + ' — ' + (donneesRecord.FormationIntitule||'');
-    document.getElementById('apercu-wrap').style.display = 'flex';
+    // Ouvrir dans un nouvel onglet (le titre = nom du fichier PDF)
+    var blob = new Blob([htmlFinal], { type: 'text/html' });
+    var url = URL.createObjectURL(blob);
+    var nouvelOnglet = window.open(url, '_blank');
+
+    if (!nouvelOnglet) {
+      // Fallback si les popups sont bloqués
+      document.getElementById('iframe-convention').srcdoc = htmlFinal;
+      document.getElementById('info-intervenant').textContent =
+        'Convention : ' + (donneesRecord.Intervenant_Nom || '–') +
+        ' — ' + (donneesRecord.Formation_Intitule || '–');
+      document.getElementById('apercu-wrap').style.display = 'flex';
+    }
   }
-}
 
   function fermerApercu() {
     document.getElementById('apercu-wrap').style.display = 'none';
