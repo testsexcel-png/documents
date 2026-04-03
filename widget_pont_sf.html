@@ -16,7 +16,7 @@
     z-index: 999; justify-content: center; align-items: flex-start;
     padding: 20px; overflow-y: auto;
   }
-  #apercu-inner { background: white; border-radius: 8px; max-width: 860px; width: 100%; position: relative; }
+  #apercu-inner { background: white; border-radius: 8px; max-width: 860px; width: 100%; }
   #barre-actions { display: flex; gap: 10px; padding: 10px 16px; background: #003189; align-items: center; border-radius: 8px 8px 0 0; }
   #barre-actions span { color: white; font-weight: 600; font-size: 13px; flex: 1; }
   .btn-action { padding: 6px 16px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; }
@@ -49,64 +49,71 @@
 var htmlModele = null;
 var currentRecord = null;
 
-function fmt(v) {
+// Formate un nombre en euros SANS ajouter le symbole € (le HTML le contient déjà)
+function fmtNum(v) {
   if (v === null || v === undefined || v === '') return '–';
   var n = parseFloat(v);
-  if (!isNaN(n)) return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+  if (!isNaN(n)) return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
   return v;
 }
-function n(v) { return (v === null || v === undefined || v === '') ? '–' : v; }
+function nn(v) { return (v === null || v === undefined || v === '') ? '–' : String(v); }
 
 function injecterDonnees(html, rec) {
-  // Remplace le contenu d'un id dans le HTML
-  function setId(h, id, val) {
-    var re = new RegExp('(<[^>]+id="'+ id +'"[^>]*>)[^<]*(</)'  , 'g');
-    return h.replace(re, '$1' + val + '$2');
+  // Parse le HTML dans un DOM temporaire
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+
+  function set(id, val) {
+    var el = doc.getElementById(id);
+    if (el) el.textContent = val;
   }
 
-  var mh   = parseFloat(rec.Remun_Init_MontantH) || 0;
+  var mh    = parseFloat(rec.Remun_Init_MontantH) || 0;
   var hPrev = parseFloat(rec.Remun_Init_Heures) || 0;
-  var a5h  = parseFloat(rec.Art5_Heures) || 0;
-  var a5mh = parseFloat(rec.Art5_MontantH) || 0;
+  var a5h   = parseFloat(rec.Art5_Heures) || 0;
+  var a5mh  = parseFloat(rec.Art5_MontantH) || 0;
   var today = rec.Date_Signature || new Date().toLocaleDateString('fr-FR');
 
-  var map = {
-    'sf-num'        : n(rec.Convention_ID),
-    'sf-intervenant': n(rec.Intervenant_Nom),
-    'sf-residence'  : n(rec.Intervenant_Lieu),
-    'sf-intitule'   : n(rec.Formation_Intitule),
-    'sf-dates'      : n(rec.Formation_Dates) + (rec.Formation_Horaires ? ' ' + rec.Formation_Horaires : ''),
-    'sf-lieu'       : n(rec.Formation_Lieu),
-    'sf-mh'         : fmt(mh),
-    'sf-h-prev'     : hPrev || '–',
-    'sf-h-real'     : hPrev || '–',
-    'sf-st1'        : fmt(rec.Remun_Init_STotal != null ? rec.Remun_Init_STotal : mh * hPrev),
-    'sf-art5-h'     : a5h || '–',
-    'sf-art5-mh'    : fmt(a5mh),
-    'sf-st2'        : fmt(rec.Art5_STotal != null ? rec.Art5_STotal : a5h * a5mh),
-    'sf-creation'   : rec.Supports_Creation ? fmt(rec.Supports_Creation) : '–',
-    'sf-maj'        : rec.Supports_Maj ? fmt(rec.Supports_Maj) : '–',
-    'sf-supp'       : rec.Supports_Particuliers_H || '–',
-    'sf-st3'        : fmt(rec.Supports_STotal),
-    'sf-total'      : fmt(rec.Total_General),
-    'sf-date-sig'   : today,
-    'sf-identite'   : n(rec.ENG_Signataire),
-    'sf-fonction'   : n(rec.ENG_Fonction),
-    'sf-service'    : n(rec.ENG_Service)
-  };
+  set('sf-num',         nn(rec.Convention_ID));
+  set('sf-intervenant', nn(rec.Intervenant_Nom));
+  set('sf-residence',   nn(rec.Intervenant_Lieu));
+  set('sf-intitule',    nn(rec.Formation_Intitule));
+  set('sf-dates',       nn(rec.Formation_Dates) + (rec.Formation_Horaires ? ' ' + rec.Formation_Horaires : ''));
+  set('sf-lieu',        nn(rec.Formation_Lieu));
 
-  for (var id in map) {
-    html = setId(html, id, map[id]);
-  }
+  set('sf-mh',     fmtNum(mh));
+  set('sf-h-prev', hPrev || '–');
+  set('sf-h-real', hPrev || '–');
+  set('sf-st1',    fmtNum(rec.Remun_Init_STotal != null ? rec.Remun_Init_STotal : mh * hPrev));
 
-  // Masquer le loading, afficher le contenu
-  html = html.replace('id="loading" class="loading"', 'id="loading" class="loading" style="display:none"'  );
-  html = html.replace('id="contenu" style="display:none"', 'id="contenu"');
+  set('sf-art5-h',  a5h || '–');
+  set('sf-art5-mh', fmtNum(a5mh));
+  set('sf-st2',     fmtNum(rec.Art5_STotal != null ? rec.Art5_STotal : a5h * a5mh));
 
-  // Supprimer le bloc <script> grist interne pour éviter les conflits
-  html = html.replace(/<script[\s\S]*?grist\.onRecord['\s\S]*?<\/script>/i, '');
+  set('sf-creation', rec.Supports_Creation ? fmtNum(rec.Supports_Creation) : '–');
+  set('sf-maj',      rec.Supports_Maj      ? fmtNum(rec.Supports_Maj)      : '–');
+  set('sf-supp',     nn(rec.Supports_Particuliers_H));
+  set('sf-st3',      fmtNum(rec.Supports_STotal));
+  set('sf-total',    fmtNum(rec.Total_General));
 
-  return html;
+  set('sf-date-sig', today);
+  set('sf-identite', nn(rec.ENG_Signataire));
+  set('sf-fonction', nn(rec.ENG_Fonction));
+  set('sf-service',  nn(rec.ENG_Service));
+
+  // Afficher le contenu, masquer le loading
+  var loading = doc.getElementById('loading');
+  var contenu = doc.getElementById('contenu');
+  if (loading) loading.style.display = 'none';
+  if (contenu) contenu.style.display = '';
+
+  // Supprimer le script grist interne pour éviter les conflits
+  var scripts = doc.querySelectorAll('script');
+  scripts.forEach(function(s) {
+    if (s.textContent.indexOf('grist.onRecord') !== -1) s.remove();
+  });
+
+  return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
 }
 
 function ouvrirApercu() {
@@ -114,7 +121,8 @@ function ouvrirApercu() {
   var htmlInjecte = injecterDonnees(htmlModele, currentRecord);
   document.getElementById('iframe-doc').srcdoc = htmlInjecte;
   document.getElementById('info-intervenant').textContent =
-    'Intervenant : ' + n(currentRecord.Intervenant_Nom) + '  |  Formation : ' + n(currentRecord.Formation_Intitule);
+    'Intervenant : ' + nn(currentRecord.Intervenant_Nom) +
+    '  |  Formation : ' + nn(currentRecord.Formation_Intitule);
   document.getElementById('apercu-wrap').style.display = 'flex';
 }
 
@@ -127,12 +135,21 @@ function imprimerIframe() {
   document.getElementById('iframe-doc').contentWindow.print();
 }
 
+function verifierPret() {
+  if (htmlModele && currentRecord) {
+    document.getElementById('etat').style.display = 'none';
+    document.getElementById('btn-ouvrir').style.display = 'block';
+  } else if (htmlModele && !currentRecord) {
+    document.getElementById('etat').textContent = '👆 Sélectionnez une convention dans la table.';
+  }
+}
+
 if (window.grist) {
   grist.ready({ requiredAccess: 'read table' });
 
   grist.docApi.fetchTable('Modeles').then(function(table) {
     if (!table || !table.HTML || table.HTML.length < 2) {
-      document.getElementById('etat').textContent = '⚠️ La table Modeles doit contenir au moins 2 lignes (ligne 2 = Service Fait).';
+      document.getElementById('etat').textContent = '⚠️ La table Modeles doit avoir au moins 2 lignes (ligne 2 = Service Fait).';
       return;
     }
     htmlModele = table.HTML[1] || null;
@@ -151,15 +168,6 @@ if (window.grist) {
   });
 } else {
   document.getElementById('etat').textContent = '⚠️ Hors Grist — ouvrez ce widget depuis La Suite.';
-}
-
-function verifierPret() {
-  if (htmlModele && currentRecord) {
-    document.getElementById('etat').style.display = 'none';
-    document.getElementById('btn-ouvrir').style.display = 'block';
-  } else if (htmlModele && !currentRecord) {
-    document.getElementById('etat').textContent = '👆 Sélectionnez une convention dans la table.';
-  }
 }
 </script>
 </body>
