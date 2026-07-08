@@ -180,6 +180,9 @@
     html = set(html, 'f-Supports_Particuliers_M',  eur(record.Supports_Particuliers_M));
     html = set(html, 'f-Supports_STotal',          eur(record.Supports_STotal));
     html = set(html, 'f-Total_General',            eur(record.Total_General));
+html = set(html, 'f-Formation_Nature', record.Formation_Nature);
+html = set(html, 'f-Formation_Type', record.Formation_Type);
+html = set(html, 'f-Niveau_remuneration', record.Niveau_remuneration);
 
     // Masquer le bouton d'impression interne (on utilise celui du widget pont)
     html = html.replace('class="btn-print"', 'class="btn-print" style="display:none"');
