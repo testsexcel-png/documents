@@ -102,10 +102,6 @@ function injecterDonnees(html, rec) {
 
   set('sf-date-sig', today);
 
-  var signataire = signatairesParId[rec.ENG_Signataire] || {};
-  set('sf-identite', nn(signataire.Nom));
-  set('sf-fonction', nn(signataire.Fonction));
-  set('sf-service',  nn(signataire.Service));
 
   var loading = doc.getElementById('loading');
   var contenu = doc.getElementById('contenu');
