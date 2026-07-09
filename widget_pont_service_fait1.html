@@ -81,6 +81,7 @@ function injecterDonnees(html, rec) {
   set('sf-dates',       nn(rec.Formation_Dates) + (rec.Formation_Horaires ? ' ' + rec.Formation_Horaires : ''));
   set('sf-lieu',        nn(rec.Formation_Lieu));
   set('sf-signataire',        nn(rec.ENG_Signataire));
+    set('sf-Fonction_signataire',        nn(rec.Fonction_signataire));
 
 
   set('sf-mh',     fmtNum(mh));
