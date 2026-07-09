@@ -98,6 +98,9 @@ function injecterDonnees(html, rec) {
 
   set('sf-date-sig', today);
 
+  console.log('ENG_Signataire (valeur reçue):', rec.ENG_Signataire, typeof rec.ENG_Signataire);
+console.log('Dictionnaire signatairesParId:', signatairesParId);
+
   var signataire = signatairesParId[rec.ENG_Signataire] || {};
   set('sf-identite', nn(signataire.Nom));
   set('sf-fonction', nn(signataire.Fonction));
