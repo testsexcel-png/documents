@@ -48,8 +48,9 @@
 <script>
 var htmlModele = null;
 var currentRecord = null;
+var signatairesParId = {};
+var signatairesCharges = false;
 
-// Formate un nombre en euros SANS ajouter le symbole € (le HTML le contient déjà)
 function fmtNum(v) {
   if (v === null || v === undefined || v === '') return '–';
   var n = parseFloat(v);
@@ -59,7 +60,6 @@ function fmtNum(v) {
 function nn(v) { return (v === null || v === undefined || v === '') ? '–' : String(v); }
 
 function injecterDonnees(html, rec) {
-  // Parse le HTML dans un DOM temporaire
   var parser = new DOMParser();
   var doc = parser.parseFromString(html, 'text/html');
 
@@ -97,17 +97,17 @@ function injecterDonnees(html, rec) {
   set('sf-total',    fmtNum(rec.Total_General));
 
   set('sf-date-sig', today);
-  set('sf-identite', nn(rec.ENG_Signataire));
-  set('sf-fonction', nn(rec.ENG_Fonction));
-  set('sf-service',  nn(rec.ENG_Service));
 
-  // Afficher le contenu, masquer le loading
+  var signataire = signatairesParId[rec.ENG_Signataire] || {};
+  set('sf-identite', nn(signataire.Nom));
+  set('sf-fonction', nn(signataire.Fonction));
+  set('sf-service',  nn(signataire.Service));
+
   var loading = doc.getElementById('loading');
   var contenu = doc.getElementById('contenu');
   if (loading) loading.style.display = 'none';
   if (contenu) contenu.style.display = '';
 
-  // Supprimer le script grist interne pour éviter les conflits
   var scripts = doc.querySelectorAll('script');
   scripts.forEach(function(s) {
     if (s.textContent.indexOf('grist.onRecord') !== -1) s.remove();
@@ -120,7 +120,6 @@ function ouvrirApercu() {
   if (!htmlModele || !currentRecord) return;
   var htmlInjecte = injecterDonnees(htmlModele, currentRecord);
 
-  // Nom de fichier PDF personnalisé
   var nom = (currentRecord.Intervenant_Nom || 'Intervenant').replace(/[/:*?<>|\\]/g, '-');
   var intitule = (currentRecord.Formation_Intitule || 'Formation').replace(/[/:*?<>|\\]/g, '-').substring(0, 40);
   var annee = new Date().getFullYear();
@@ -131,13 +130,11 @@ function ouvrirApercu() {
     htmlInjecte = htmlInjecte.replace('<head>', '<head><title>' + titrePdf + '</title>');
   }
 
-  // Ouvrir dans un nouvel onglet
   var blob = new Blob([htmlInjecte], { type: 'text/html' });
   var url = URL.createObjectURL(blob);
   var nouvelOnglet = window.open(url, '_blank');
 
   if (!nouvelOnglet) {
-    // Fallback si popup bloqué
     document.getElementById('iframe-doc').srcdoc = htmlInjecte;
     document.getElementById('info-intervenant').textContent =
       'Intervenant : ' + nn(currentRecord.Intervenant_Nom) +
@@ -156,7 +153,7 @@ function imprimerIframe() {
 }
 
 function verifierPret() {
-  if (htmlModele && currentRecord) {
+  if (htmlModele && currentRecord && signatairesCharges) {
     document.getElementById('etat').style.display = 'none';
     document.getElementById('btn-ouvrir').style.display = 'block';
   } else if (htmlModele && !currentRecord) {
@@ -180,6 +177,21 @@ if (window.grist) {
     verifierPret();
   }).catch(function() {
     document.getElementById('etat').textContent = '⚠️ Table "Modeles" introuvable.';
+  });
+
+  grist.docApi.fetchTable('Signataires').then(function(table) {
+    var ids = table.id;
+    for (var i = 0; i < ids.length; i++) {
+      signatairesParId[ids[i]] = {
+        Nom: table.Nom[i],
+        Fonction: table.Fonction[i],
+        Service: table.Service[i]
+      };
+    }
+    signatairesCharges = true;
+    verifierPret();
+  }).catch(function(e) {
+    document.getElementById('etat').textContent = '⚠️ Table "Signataires" introuvable.';
   });
 
   grist.onRecord(function(record) {
