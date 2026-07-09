@@ -108,6 +108,9 @@ function injecterDonnees(html, rec) {
 
 set('sf-h-real', heuresRealisees || '–');
 
+      var labelColonne = (record.Formation_Nature === "Direction de session") ? "Nb jours" : "Nb heures";
+html = set(html, 'f-Label_NbHeuresOuJours', labelColonne);
+
 
   var loading = doc.getElementById('loading');
   var contenu = doc.getElementById('contenu');
