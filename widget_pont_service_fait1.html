@@ -113,7 +113,13 @@ var estDirection = (rec.Formation_Nature === "Direction de session");
 
 var labelLigne1 = estDirection ? "Montant journalier" : "Montant horaire";
 var labelLigne2 = estDirection ? "Nb jours réalisés" : "Nombre d'heures réalisées (en heure)";
+var labelNbHeuresPrepa = estDirection ? "" : "Nombre d'heures";
+var labelMontantHPrepa = estDirection ? "Forfait" : "Montant horaire";
+var valeurNbHeuresPrepa = estDirection ? "" : (rec.Formation_Horaires_Something || '–');
 
+set('f-Label_NbHeuresPrepa', labelNbHeuresPrepa);
+set('f-Label_MontantHPrepa', labelMontantHPrepa);
+set('sf-h-prepa', valeurNbHeuresPrepa);
 set('f-Label_MontantHoraireOuJournalier', labelLigne1);
 set('f-Label_NbHeuresOuJours', labelLigne2);
 
