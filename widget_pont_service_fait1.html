@@ -79,6 +79,7 @@ function injecterDonnees(html, rec) {
   set('sf-residence',   nn(rec.Intervenant_Lieu));
   set('sf-intitule',    nn(rec.Formation_Intitule));
   set('sf-dates',       nn(rec.Formation_Dates) + (rec.Formation_Horaires ? ' ' + rec.Formation_Horaires : ''));
+  
   set('sf-lieu',        nn(rec.Formation_Lieu));
   set('sf-signataire',        nn(rec.ENG_Signataire));
   set('sf-Fonction_signataire',        nn(rec.Fonction_signataire));
@@ -101,6 +102,12 @@ function injecterDonnees(html, rec) {
   set('sf-total',    fmtNum(rec.Total_General));
 
   set('sf-date-sig', today);
+
+  var heuresRealisees = (rec.Heures_realisees !== null && rec.Heures_realisees !== undefined && rec.Heures_realisees !== '')
+  ? rec.Heures_realisees
+  : rec.Formation_Horaires;
+
+set('sf-h-real', heuresRealisees || '–');
 
 
   var loading = doc.getElementById('loading');
