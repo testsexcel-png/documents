@@ -167,7 +167,7 @@
     html = set(html, 'f-Formation_NbParticipants', record.Formation_NbParticipants);
     html = set(html, 'f-Formation_DureePrepa',     record.Formation_DureePrepa);
     html = set(html, 'f-Remun_Init_Heures',        record.Remun_Init_Heures);
-    html = set(html, 'f-Art5_Heures',              record.Art5_Heures);
+
     html = set(html, 'f-Supports_Particuliers_H',  record.Supports_Particuliers_H);
     html = set(html, 'f-Date_Signature',           record.Date_Signature);
     html = set(html, 'f-ENG_Signataire',           record.ENG_Signataire);
@@ -187,6 +187,17 @@ html = set(html, 'f-Niveau_remuneration_art5', record.Niveau_remuneration);
 html = set(html, 'f-Niveau_remuneration_support', record.Niveau_remuneration);
 html = set(html, 'f-Support_MontantH', eur(record.Remun_Init_MontantH));
 html = set(html, 'f-Nombre_de_jours_de_l_intervention', record.Nombre_de_jours_de_l_intervention);
+
+    html = set(
+  html,
+  'f-Art5_Heures',
+  record.Art5_Heures == null || record.Art5_Heures === '' || Number(record.Art5_Heures) === 0
+    ? ''
+    : Number(record.Art5_Heures).toLocaleString('fr-FR', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      })
+);
 
     var labelColonne = (record.Formation_Nature === "Direction de session") ? "Nb jours" : "Nb heures";
 html = set(html, 'f-Label_NbHeuresOuJours', labelColonne);
