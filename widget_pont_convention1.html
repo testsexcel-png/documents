@@ -220,23 +220,34 @@ html = set(html, 'f-Label_NbHeuresOuJours', labelColonne);
     return html;
   }
 
-  function ouvrirApercu() {
-    var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
-    var nom = (donneesRecord.Intervenant_Nom || 'Intervenant').replace(/[/:*?<>|\\]/g, '-');
-    var intitule = (donneesRecord.Formation_Intitule || 'Formation').replace(/[/:*?<>|\\]/g, '-').substring(0, 40);
-    var annee = new Date().getFullYear();
-    var titrePdf = 'Convention_' + nom + '_' + intitule + '_' + annee;
-    htmlFinal = htmlFinal.replace(/<title>[^<]*<\/title>/, '<title>' + titrePdf + '<\/title>');
-    var blob = new Blob([htmlFinal], { type: 'text/html' });
-    var url = URL.createObjectURL(blob);
-    var nouvelOnglet = window.open(url, '_blank');
-    if (!nouvelOnglet) {
-      document.getElementById('iframe-convention').srcdoc = htmlFinal;
-      document.getElementById('info-intervenant').textContent =
-        'Convention : ' + (donneesRecord.Intervenant_Nom || '–') +
-        ' — ' + (donneesRecord.Formation_Intitule || '–');
-      document.getElementById('apercu-wrap').style.display = 'flex';
-    }
+function ouvrirApercu() {
+  var htmlFinal = injecterDonnees(htmlModele, donneesRecord);
+  var nom = (donneesRecord.Intervenant_Nom || 'Intervenant').replace(/[/:*?<>|\\]/g, '-');
+  var intitule = (donneesRecord.Formation_Intitule || 'Formation').replace(/[/:*?<>|\\]/g, '-').substring(0, 40);
+  var annee = new Date().getFullYear();
+  var titrePdf = 'Convention_' + nom + '_' + intitule + '_' + annee;
+
+  htmlFinal = htmlFinal.replace(/<title>[^<]*<\/title>/i, '<title>' + titrePdf + '</title>');
+
+  if (!/class=["']btn-print["']/.test(htmlFinal)) {
+    htmlFinal = htmlFinal.replace(
+      /<body[^>]*>/i,
+      '$&<button class="btn-print" onclick="window.print()">Imprimer PDF</button>'
+    );
+  }
+
+  var blob = new Blob([htmlFinal], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  var nouvelOnglet = window.open(url, '_blank');
+
+  if (!nouvelOnglet) {
+    document.getElementById('iframe-convention').srcdoc = htmlFinal;
+    document.getElementById('info-intervenant').textContent =
+      'Convention : ' + (donneesRecord.Intervenant_Nom || '–') +
+      ' — ' + (donneesRecord.Formation_Intitule || '–');
+    document.getElementById('apercu-wrap').style.display = 'flex';
+  }
+}
   }
 
   function fermerApercu() {
