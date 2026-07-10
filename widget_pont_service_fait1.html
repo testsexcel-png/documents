@@ -111,11 +111,15 @@ set('sf-st2', fmtNum(rec.Art5_STotal));
 
   set('sf-date-sig', today);
 
-  var heuresRealisees = (rec.Heures_realisees !== null && rec.Heures_realisees !== undefined && rec.Heures_realisees !== '')
-  ? rec.Heures_realisees
-  : rec.Formation_Horaires;
+var quantite = '';
 
-set('sf-h-real', heuresRealisees || '–');
+if (rec.Formation_Nature === 'Animation') {
+  quantite = rec.Heures_realisees ? rec.Heures_realisees : rec.Remun_Init_Heures;
+} else if (rec.Formation_Nature === 'Direction de session') {
+  quantite = rec.Nb_Jours_realises ? rec.Nb_Jours_realises : rec.Nombre_de_jours_de_l_intervention;
+}
+
+set('sf-h-real', quantite || '');
 
 var estDirection = (rec.Formation_Nature === "Direction de session");
 
