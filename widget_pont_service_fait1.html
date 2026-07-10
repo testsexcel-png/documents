@@ -92,6 +92,7 @@ function injecterDonnees(html, rec) {
   set('sf-st1',    fmtNum(rec.Remun_Init_STotal != null ? rec.Remun_Init_STotal : mh * hPrev));
 
   set('sf-art5-h',  a5h || '–');
+    set('sf-mh1',     fmtNum(mh));
   set('sf-art5-mh', fmtNum(a5mh));
 set('sf-st2', fmtNum(rec.Art5_STotal));
 
