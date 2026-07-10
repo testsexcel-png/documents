@@ -86,9 +86,9 @@ set('sf-art5-h', isNaN(a5h) ? '–' : a5h.toLocaleString('fr-FR', {
   set('sf-dates',       nn(rec.Formation_Dates) + (rec.Formation_Horaires ? ' - ' + rec.Formation_Horaires : ''));
   
   set('sf-lieu',        nn(rec.Formation_Lieu));
-  set('sf-signataire',        nn(rec.ENG_Signataire));
-  set('sf-Fonction_signataire',        nn(rec.Fonction_signataire));
-  set('sf-Service_Signataire',        nn(rec.Service_Signataire));
+  set('sf-signataire', rec.Signataire_sf || '');
+set('sf-fonction-signataire', rec.Fonction_signataire_sf || '');
+set('sf-service-signataire', rec.Service_signataire_sf || '');
 
 
   set('sf-mh',     fmtNum(mh));
