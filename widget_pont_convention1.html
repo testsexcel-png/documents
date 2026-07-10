@@ -169,7 +169,13 @@
     html = set(html, 'f-Formation_Public',         record.Formation_Public);
     html = set(html, 'f-Formation_NbParticipants', record.Formation_NbParticipants);
     html = set(html, 'f-Formation_DureePrepa',     record.Formation_DureePrepa);
-    html = set(html, 'f-Remun_Init_Heures',        record.Remun_Init_Heures);
+   html = set(
+  html,
+  'f-Remun_Init_Heures',
+  record.Formation_Nature === 'Direction de session'
+    ? record.Nombre_de_jours_de_l_intervention
+    : record.Remun_Init_Heures
+);
 
     html = set(html, 'f-Supports_Particuliers_H',  record.Supports_Particuliers_H);
     html = set(html, 'f-Date_Signature',           record.Date_Signature);
