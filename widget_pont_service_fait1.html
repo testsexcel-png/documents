@@ -79,7 +79,7 @@ function injecterDonnees(html, rec) {
   set('sf-intervenant', nn(rec.Intervenant_Nom));
   set('sf-residence',   nn(rec.Intervenant_Lieu));
   set('sf-intitule',    nn(rec.Formation_Intitule));
-  set('sf-dates',       nn(rec.Formation_Dates) + (rec.Formation_Horaires ? ' ' + rec.Formation_Horaires : ''));
+  set('sf-dates',       nn(rec.Formation_Dates) + (rec.Formation_Horaires ? ' - ' + rec.Formation_Horaires : ''));
   
   set('sf-lieu',        nn(rec.Formation_Lieu));
   set('sf-signataire',        nn(rec.ENG_Signataire));
