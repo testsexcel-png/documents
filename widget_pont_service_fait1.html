@@ -71,7 +71,11 @@ function injecterDonnees(html, rec) {
 
   var mh    = parseFloat(rec.Remun_Init_MontantH) || 0;
   var hPrev = parseFloat(rec.Remun_Init_Heures) || 0;
-  var a5h   = parseFloat(rec.Art5_Heures) || 0;
+var a5h = parseFloat(rec.Art5_Heures);
+set('sf-art5-h', isNaN(a5h) ? '–' : a5h.toLocaleString('fr-FR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1
+}));
   var a5mh  = parseFloat(rec.Art5_MontantH) || 0;
   var today = rec.Date_Signature || new Date().toLocaleDateString('fr-FR');
 
@@ -91,7 +95,7 @@ function injecterDonnees(html, rec) {
   set('sf-h-prev', hPrev || '–');
   set('sf-st1',    fmtNum(rec.Remun_Init_STotal != null ? rec.Remun_Init_STotal : mh * hPrev));
 
-  set('sf-art5-h',  a5h || '–');
+
     set('sf-mh1',     fmtNum(mh));
   set('sf-art5-mh', fmtNum(a5mh));
 set('sf-st2', fmtNum(rec.Art5_STotal));
