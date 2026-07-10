@@ -202,8 +202,7 @@ html = set(html, 'f-Art5_Heures_2', art5Heures);
     var labelColonne = (record.Formation_Nature === "Direction de session") ? "Nb jours" : "Nb heures";
 html = set(html, 'f-Label_NbHeuresOuJours', labelColonne);
 
-    // Masquer le bouton d'impression interne (on utilise celui du widget pont)
-    html = html.replace('class="btn-print"', 'class="btn-print" style="display:none"');
+   
     // Masquer le message de chargement
     html = html.replace('id="loading"', 'id="loading" style="display:none"');
     // Afficher le contenu
